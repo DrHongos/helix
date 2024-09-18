@@ -24,7 +24,7 @@ ENV SCCACHE_REGION=eu-west-1
 ENV SCCACHE_S3_USE_SSL=true
 
 # Copy necessary contents into the container at /app
-ADD ./repos /app/
+ADD ./ /app/
 
 RUN ls -lah /app
 RUN ls -lah /app/${REPO_NAME}
