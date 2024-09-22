@@ -36,12 +36,12 @@ async fn run() {
 
 fn main() {
     let num_cpus = num_cpus::get();
-    let worker_threads = num_cpus;
-    let max_blocking_threads = num_cpus / 2;
+//    let worker_threads = num_cpus;
+//    let max_blocking_threads = num_cpus / 2;
 
     let rt = Builder::new_multi_thread()
-        .worker_threads(worker_threads)
-        .max_blocking_threads(max_blocking_threads)
+        .worker_threads(2)
+        .max_blocking_threads(1)
         .enable_all()
         .build()
         .unwrap();
