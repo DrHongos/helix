@@ -35,7 +35,7 @@ async fn run() {
 }
 
 fn main() {
-    let num_cpus = num_cpus::get();
+//    let num_cpus = num_cpus::get();
 //    let worker_threads = num_cpus;
 //    let max_blocking_threads = num_cpus / 2;
 

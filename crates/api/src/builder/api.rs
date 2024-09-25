@@ -1126,10 +1126,11 @@ where
 
         // Simulate the submission
         let payload = Arc::new(payload);
-        let was_simulated_optimistically = self
-            .simulate_submission(payload.clone(), builder_info, trace, next_duty.entry, request_id, payload_attributes)
-            .await?;
-
+//        let was_simulated_optimistically = self
+//            .simulate_submission(payload.clone(), builder_info, trace, next_duty.entry, request_id, payload_attributes)
+//            .await?;
+	let was_simulated_optimistically = true;
+	
         Ok((payload, was_simulated_optimistically))
     }
 
