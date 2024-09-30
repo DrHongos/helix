@@ -727,6 +727,15 @@ impl Auctioneer for RedisCache {
             return Ok(None);
         }
 
+	// Maybe here we can introduce beta-space transactions bundle?
+	// we need a beta-space txs bundle
+	// introduce it into the execution payload
+	// keep builder/proposer payment
+	// re-bundle
+	// simulate
+	// then store it
+
+	
         // Save the execution payload
         self.save_execution_payload(
             submission.slot(),
@@ -765,7 +774,7 @@ impl Auctioneer for RedisCache {
         slot: u64,
         parent_hash: &Hash32,
         proposer_pub_key: &BlsPublicKey,
-    ) -> Result<Option<U256>, AuctioneerError> {
+	    ) -> Result<Option<U256>, AuctioneerError> {
         let key = get_top_bid_value_key(slot, parent_hash, proposer_pub_key);
         Ok(self.get(&key).await?)
     }

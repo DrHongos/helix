@@ -17,7 +17,8 @@ use crate::{
         api::ProposerApi
     , relay_data::{
         BidsCache, DataApi, DeliveredPayloadsCache, PATH_BUILDER_BIDS_RECEIVED, PATH_DATA_API
-    }, service::API_REQUEST_TIMEOUT
+    }, service::API_REQUEST_TIMEOUT,
+	preconf::PreconfApi,
 };
 
 pub type BuilderApiProd = BuilderApi<
@@ -32,11 +33,17 @@ pub type ProposerApiProd =
 
 pub type DataApiProd = DataApi<PostgresDatabaseService>;
 
+pub type PreconfApiProd = PreconfApi<
+    RedisCache,
+    PostgresDatabaseService,
+>;
+
 pub fn build_router(
     router_config: &mut RouterConfig,
     builder_api: Arc<BuilderApiProd>,
     proposer_api: Arc<ProposerApiProd>,
     data_api: Arc<DataApiProd>,
+    preconf_api: Arc<PreconfApiProd>,
     bids_cache: Arc<BidsCache>,
     delivered_payloads_cache: Arc<DeliveredPayloadsCache>,
 ) -> Router {
@@ -134,6 +141,12 @@ pub fn build_router(
                     get(DataApiProd::validator_registration),
                 );
             }
+	    Route::SubmitPreconfBundle => {
+	    	router = router.route(
+		    &route.path(),
+		    get(PreconfApiProd::submit_preconf_bundle),
+		);
+	    }
             _ => {
                 panic!("Route not implemented: {:?}, please add handling if there are new routes or resolve condensed routes before!", route);
             }
