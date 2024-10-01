@@ -60,7 +60,9 @@ use crate::{builder::{
 }, gossiper::{
     traits::GossipClientTrait,
     types::{BroadcastHeaderParams, BroadcastPayloadParams, GossipedMessage},
-}};
+},    
+    preconf::error::PreconfApiError,
+};
 
 pub(crate) const MAX_PAYLOAD_LENGTH: usize = 1024 * 1024 * 10;
 
@@ -101,10 +103,10 @@ where
         let (db_sender, db_receiver) = mpsc::channel::<DbInfo>(10_000);
 
         // Spin up db processing task
-        let db_clone = db.clone();
-        tokio::spawn(async move {
-            process_db_additions(db_clone, db_receiver).await;
-        });
+//        let db_clone = db.clone();
+//        tokio::spawn(async move {
+//            process_db_additions(db_clone, db_receiver).await;
+//        });
 
         let api = Self {
             auctioneer,
@@ -149,13 +151,14 @@ where
     ) -> Result<StatusCode, PreconfApiError> {
 
         info!(
-            request_id = %request_id,
+            //request_id = %request_id,
             event = "submit_preconf_bundle",
-            head_slot = head_slot,
-            timestamp_request_start = trace.receive,
+            //head_slot = head_slot,
+            //timestamp_request_start = trace.receive,
         );
 
-
+	// extract bundle of req body
+	
 
         Ok(StatusCode::OK)
     }

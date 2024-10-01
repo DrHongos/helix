@@ -77,3 +77,7 @@ uuid = { version = "1.5", features = ["fast-rng", "v4"] }
 
 # Broadcasting
 fiber = { git = "https://github.com/chainbound/fiber-rs.git", tag = "v0.5.1" }
+
+# Debugging
+#zstd-sys = "=2.0.9"
+time = "0.3.36"

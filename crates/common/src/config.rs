@@ -140,7 +140,7 @@ impl RouterConfig {
 
         if self.enabled_routes.is_empty() {
             // If no routes are enabled, enable all real routes
-            self.extend([Route::BuilderApi, Route::ProposerApi, Route::DataApi]);
+            self.extend([Route::BuilderApi, Route::ProposerApi, Route::DataApi, Route::PreconfApi]);
         } else {
             if self.contains(Route::All) {
                 // If All is present, replace it with all real routes
@@ -173,6 +173,11 @@ impl RouterConfig {
                 Route::BuilderBidsReceived,
                 Route::ValidatorRegistration,
             ],
+        );
+
+        self.replace_condensed_with_real(
+            Route::PreconfApi,
+            &[Route::SubmitPreconfBundle],
         );
     }
 
@@ -221,6 +226,7 @@ pub enum Route {
     BuilderApi,
     ProposerApi,
     DataApi,
+    PreconfApi,
     GetValidators,
     SubmitBlock,
     SubmitBlockOptimistic,
@@ -233,6 +239,7 @@ pub enum Route {
     ProposerPayloadDelivered,
     BuilderBidsReceived,
     ValidatorRegistration,
+    SubmitPreconfBundle,
 }
 
 impl Route {
@@ -250,10 +257,12 @@ impl Route {
             Route::ProposerPayloadDelivered => format!("{PATH_DATA_API}{PATH_PROPOSER_PAYLOAD_DELIVERED}"),
             Route::BuilderBidsReceived => format!("{PATH_DATA_API}{PATH_BUILDER_BIDS_RECEIVED}"),
             Route::ValidatorRegistration => format!("{PATH_DATA_API}{PATH_VALIDATOR_REGISTRATION}"),
+            Route::SubmitPreconfBundle => format!("{PATH_DATA_API}{PATH_SUBMIT_PRECONF}"),
             Route::All => panic!("All is not a real route"),
             Route::BuilderApi => panic!("BuilderApi is not a real route"),
             Route::ProposerApi => panic!("ProposerApi is not a real route"),
             Route::DataApi => panic!("DataApi is not a real route"),
+            Route::PreconfApi => panic!("PreconfApi is not a real route"),
         }
     }
     

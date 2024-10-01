@@ -18,7 +18,7 @@ use crate::{
     , relay_data::{
         BidsCache, DataApi, DeliveredPayloadsCache, PATH_BUILDER_BIDS_RECEIVED, PATH_DATA_API
     }, service::API_REQUEST_TIMEOUT,
-	preconf::PreconfApi,
+	preconf::api::PreconfApi,
 };
 
 pub type BuilderApiProd = BuilderApi<
@@ -144,7 +144,7 @@ pub fn build_router(
 	    Route::SubmitPreconfBundle => {
 	    	router = router.route(
 		    &route.path(),
-		    get(PreconfApiProd::submit_preconf_bundle),
+		    post(PreconfApiProd::submit_preconf_bundle),
 		);
 	    }
             _ => {
@@ -172,6 +172,7 @@ pub fn build_router(
         .layer(Extension(builder_api))
         .layer(Extension(proposer_api))
         .layer(Extension(data_api))
+	.layer(Extension(preconf_api))
         .layer(Extension(bids_cache))
         .layer(Extension(delivered_payloads_cache));
 

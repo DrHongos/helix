@@ -9,7 +9,7 @@ use tokio::{
 use tracing::{error, info};
 
 use crate::{
-    builder::optimistic_simulator::OptimisticSimulator, gossiper::grpc_gossiper::GrpcGossiperClientManager, relay_data::{BidsCache, DeliveredPayloadsCache}, router::{build_router, BuilderApiProd, DataApiProd, ProposerApiProd}
+    builder::optimistic_simulator::OptimisticSimulator, gossiper::grpc_gossiper::GrpcGossiperClientManager, relay_data::{BidsCache, DeliveredPayloadsCache}, router::{build_router, BuilderApiProd, DataApiProd, ProposerApiProd, PreconfApiProd}
 };
 use helix_beacon_client::{
     beacon_client::BeaconClient, fiber_broadcaster::FiberBroadcaster,
@@ -171,6 +171,7 @@ impl ApiService {
         ));
 
         let data_api = Arc::new(DataApiProd::new(validator_preferences.clone(), db.clone()));
+	let preconf_api = Arc::new(PreconfApiProd::new(auctioneer.clone(), db.clone(), chain_info.clone()));
 
         let bids_cache: Arc<BidsCache> = Arc::new(
             Cache::builder()
@@ -186,7 +187,7 @@ impl ApiService {
                 .build()
         );
 
-        let router = build_router(&mut config.router_config, builder_api, proposer_api, data_api, bids_cache, delivered_payloads_cache);
+        let router = build_router(&mut config.router_config, builder_api, proposer_api, data_api, preconf_api, bids_cache, delivered_payloads_cache);
 
         let listener = tokio::net::TcpListener::bind("0.0.0.0:4040").await.unwrap();
         match axum::serve(listener, router.into_make_service_with_connect_info::<SocketAddr>()).await {
