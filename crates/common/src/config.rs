@@ -145,7 +145,7 @@ impl RouterConfig {
             if self.contains(Route::All) {
                 // If All is present, replace it with all real routes
                 self.remove(&Route::All);
-                self.extend([Route::BuilderApi, Route::ProposerApi, Route::DataApi]);
+                self.extend([Route::BuilderApi, Route::ProposerApi, Route::DataApi, Route::PreconfApi]);
             }   
         }
 
@@ -257,7 +257,7 @@ impl Route {
             Route::ProposerPayloadDelivered => format!("{PATH_DATA_API}{PATH_PROPOSER_PAYLOAD_DELIVERED}"),
             Route::BuilderBidsReceived => format!("{PATH_DATA_API}{PATH_BUILDER_BIDS_RECEIVED}"),
             Route::ValidatorRegistration => format!("{PATH_DATA_API}{PATH_VALIDATOR_REGISTRATION}"),
-            Route::SubmitPreconfBundle => format!("{PATH_DATA_API}{PATH_SUBMIT_PRECONF}"),
+            Route::SubmitPreconfBundle => format!("{PATH_PRECONF_API}{PATH_SUBMIT_PRECONF}"),
             Route::All => panic!("All is not a real route"),
             Route::BuilderApi => panic!("BuilderApi is not a real route"),
             Route::ProposerApi => panic!("ProposerApi is not a real route"),

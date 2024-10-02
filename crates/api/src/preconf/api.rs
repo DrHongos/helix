@@ -3,7 +3,7 @@
 // TODO: prepare /beta_transactions_request endpoint
 // to store a bundle of transactions to be included in a slot block
 use std::{
-    collections::HashMap, io::Read, ops::Deref, sync::Arc, time::{Duration, SystemTime, UNIX_EPOCH}
+    collections::HashMap, io::Read, ops::Deref, sync::Arc, time::{Duration, SystemTime, UNIX_EPOCH}, sync::Mutex
 };
 
 use axum::{
@@ -19,6 +19,7 @@ use ethereum_consensus::{
     primitives::{BlsPublicKey, Bytes32, Hash32},
     ssz::{self, prelude::*},
 };
+use reth_primitives::transaction::{TransactionSigned, TxType};
 use flate2::read::GzDecoder;
 use futures::StreamExt;
 use hyper::HeaderMap;
@@ -86,6 +87,8 @@ where
 
     proposer_duties_response: Arc<RwLock<Option<Vec<u8>>>>,
     payload_attributes: Arc<RwLock<HashMap<String, PayloadAttributesUpdate>>>,
+
+    beta_space_container: Arc<Mutex<Vec<TransactionSigned>>>,
 }
 
 impl<A, DB> PreconfApi<A, DB>
@@ -121,6 +124,8 @@ where
             curr_slot_info: Arc::new(RwLock::new((0, None))),
             proposer_duties_response: Arc::new(RwLock::new(None)),
             payload_attributes: Arc::new(RwLock::new(HashMap::new())),
+
+	    beta_space_container: Arc::new(Mutex::new(Vec::new())),
         };
 
         // Spin up gossip processing task
@@ -158,7 +163,7 @@ where
         );
 
 	// extract bundle of req body
-	
+		
 
         Ok(StatusCode::OK)
     }

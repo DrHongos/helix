@@ -23,4 +23,6 @@ pub(crate) const PATH_DATA_API: &str = "/relay/v1/data";
 pub(crate) const PATH_PROPOSER_PAYLOAD_DELIVERED: &str = "/bidtraces/proposer_payload_delivered";
 pub(crate) const PATH_BUILDER_BIDS_RECEIVED: &str = "/bidtraces/builder_blocks_received";
 pub(crate) const PATH_VALIDATOR_REGISTRATION: &str = "/validator_registration";
+
+pub(crate) const PATH_PRECONF_API: &str = "/relay/v1/preconf";
 pub(crate) const PATH_SUBMIT_PRECONF: &str = "/submit_preconf_bundle";
