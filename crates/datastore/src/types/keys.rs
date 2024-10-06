@@ -15,3 +15,4 @@ pub(crate) const SEEN_BLOCK_HASHES_KEY: &str = "seen-block-hashes";
 pub(crate) const PROPOSER_WHITELIST_KEY: &str = "proposer-whitelist";
 pub(crate) const HOUSEKEEPER_LOCK_KEY: &str = "housekeeper-lock";
 pub(crate) const PENDING_BLOCK_KEY: &str = "pending-block";
+pub(crate) const BETA_SPACE_BUNDLE_KEY: &str = "beta-space-bundle";

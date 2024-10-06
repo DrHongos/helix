@@ -1,6 +1,7 @@
 pub mod builder_api;
 pub mod data_api;
 pub mod proposer_api;
+//pub mod preconf_api;
 
 pub(crate) const PATH_BUILDER_API: &str = "/relay/v1/builder";
 
@@ -26,3 +27,5 @@ pub(crate) const PATH_VALIDATOR_REGISTRATION: &str = "/validator_registration";
 
 pub(crate) const PATH_PRECONF_API: &str = "/relay/v1/preconf";
 pub(crate) const PATH_SUBMIT_PRECONF: &str = "/submit_preconf_bundle";
+pub(crate) const PATH_TEST: &str = "/test";
+pub(crate) const PATH_GET_BUNDLE: &str = "/get_bundle_slot";

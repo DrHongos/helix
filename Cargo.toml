@@ -81,3 +81,7 @@ fiber = { git = "https://github.com/chainbound/fiber-rs.git", tag = "v0.5.1" }
 # Debugging
 #zstd-sys = "=2.0.9"
 time = "0.3.36"
+
+# Added
+reth-rpc = { git = "https://github.com/paradigmxyz/reth", rev = "5dd5555c5c7d8e43420e273e7005b8af63a847a5" }
+alloy-primitives = "0.8.5"

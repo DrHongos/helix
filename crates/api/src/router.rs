@@ -35,7 +35,7 @@ pub type DataApiProd = DataApi<PostgresDatabaseService>;
 
 pub type PreconfApiProd = PreconfApi<
     RedisCache,
-    PostgresDatabaseService,
+    GrpcGossiperClientManager,
 >;
 
 pub fn build_router(
@@ -123,6 +123,13 @@ pub fn build_router(
                         post(ProposerApiProd::get_payload),
                     );
             }
+            Route::SubmitBundle => {
+                router = router
+                    .route(
+                        &route.path(),
+                        post(ProposerApiProd::submit_preconf_bundle),
+                    );
+            }
             Route::ProposerPayloadDelivered => {
                 router = router.route(
                     &route.path(),
@@ -141,12 +148,24 @@ pub fn build_router(
                     get(DataApiProd::validator_registration),
                 );
             }
-	    Route::SubmitPreconfBundle => {
-	    	router = router.route(
-		    &route.path(),
-		    post(PreconfApiProd::submit_preconf_bundle),
-		);
-	    }
+            Route::SubmitPreconfBundle => {
+                router = router.route(
+                   &route.path(),
+                    post(PreconfApiProd::submit_preconf_bundle),
+                );
+            }
+            Route::Test => {
+                router = router.route(
+                    &route.path(),
+                    get(PreconfApiProd::test),
+                );
+            }
+            Route::GetSlotBetaBundle => {
+                router = router.route(
+                    &route.path(),
+                    post(PreconfApiProd::get_bundle_for_slot),
+                );
+	        }
             _ => {
                 panic!("Route not implemented: {:?}, please add handling if there are new routes or resolve condensed routes before!", route);
             }
@@ -172,7 +191,7 @@ pub fn build_router(
         .layer(Extension(builder_api))
         .layer(Extension(proposer_api))
         .layer(Extension(data_api))
-	.layer(Extension(preconf_api))
+	    .layer(Extension(preconf_api))
         .layer(Extension(bids_cache))
         .layer(Extension(delivered_payloads_cache));
 

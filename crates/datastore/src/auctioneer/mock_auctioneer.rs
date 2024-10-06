@@ -12,6 +12,7 @@ use helix_database::types::BuilderInfoDocument;
 use tokio_stream::Stream;
 
 use crate::{error::AuctioneerError, types::SaveBidAndUpdateTopBidResponse, Auctioneer};
+use reth_primitives::PooledTransactionsElement;
 
 #[derive(Default, Clone)]
 pub struct MockAuctioneer {
@@ -43,6 +44,21 @@ impl Auctioneer for MockAuctioneer {
         _hash: &Hash32,
     ) -> Result<(), AuctioneerError> {
         Ok(())
+    }
+
+    async fn save_bundle_beta_space_txs(
+        &self,
+        slot: u64,
+        bundle: Vec<PooledTransactionsElement>,
+    ) -> Result<(), AuctioneerError> {
+        Ok(())
+    }
+
+    async fn get_bundle_beta_space_txs(
+        &self,
+        slot: u64,
+    ) -> Result<Option<Vec<PooledTransactionsElement>>, AuctioneerError> {
+        Ok(None)
     }
 
     async fn get_best_bid(

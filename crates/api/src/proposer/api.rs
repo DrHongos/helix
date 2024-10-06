@@ -43,6 +43,9 @@ use crate::{builder::api, gossiper::{traits::GossipClientTrait, types::{Broadcas
     error::ProposerApiError, unblind_beacon_block, GetHeaderParams, PreferencesHeader, GET_HEADER_REQUEST_CUTOFF_MS
 }};
 
+//added
+use reth_primitives::{PooledTransactionsElement, Bytes};
+
 const GET_PAYLOAD_REQUEST_CUTOFF_MS: i64 = 4000;
 pub(crate) const MAX_BLINDED_BLOCK_LENGTH: usize = 1024 * 1024;
 pub(crate) const MAX_VAL_REGISTRATIONS_LENGTH: usize = 425 * 10_000; // 425 bytes per registration (json) * 10,000 registrations
@@ -68,6 +71,8 @@ where
     validator_preferences: Arc<ValidatorPreferences>,
 
     target_get_payload_propagation_duration_ms: u64,
+    //added
+    beta_space_bundle: Arc<RwLock<Option<Vec<PooledTransactionsElement>>>>,
 }
 
 impl<A, DB, M, G> ProposerApi<A, DB, M, G>
@@ -99,6 +104,7 @@ where
             chain_info,
             validator_preferences,
             target_get_payload_propagation_duration_ms,
+            beta_space_bundle: Arc::new(RwLock::new(None)),
         };
 
         // Spin up gossip processing task
@@ -463,16 +469,27 @@ where
         let slot = signed_blinded_block.message().slot();
 
         // Broadcast get payload request
-        if let Err(e) = proposer_api.gossiper.broadcast_get_payload(BroadcastGetPayloadParams {
-            signed_blinded_beacon_block: signed_blinded_block.clone(),
-            request_id: request_id.clone(),
-        }).await {
-            error!(request_id = %request_id, error = %e, "failed to broadcast get payload");
-        
-        };
+//        if let Err(e) = proposer_api.gossiper.broadcast_get_payload(BroadcastGetPayloadParams {
+//            signed_blinded_beacon_block: signed_blinded_block.clone(),
+//            request_id: request_id.clone(),
+//        }).await {
+//            error!(request_id = %request_id, error = %e, "failed to broadcast get payload");      
+//        };
 
         match proposer_api._get_payload(signed_blinded_block, &mut trace, &request_id).await {
-            Ok(get_payload_response) => Ok(axum::Json(get_payload_response)),
+            Ok(get_payload_response) => {
+                print!("-------- Returning payload ---------");
+                let bb = proposer_api.beta_space_bundle.read().await.clone();
+                print!("beta_space_bundle is {:#?}", bb);
+                if let Some(beta_bundle) = bb {
+                    print!("Should add: {:#?}", beta_bundle);
+                    print!("To: {:#?}", get_payload_response);
+                    // need to create a fn that has access to self
+                    proposer_api.clean_beta_space();
+                    //proposer_api.beta_space_bundle = None; // clean up the memory
+                }
+                Ok(axum::Json(get_payload_response))
+            },
             Err(err) => {
                 // Save error to DB
                 if let Err(err) = proposer_api
@@ -781,6 +798,58 @@ where
         // Return response
         info!(request_id = %request_id, trace = ?trace, timestamp = get_nanos_timestamp()?, "delivering payload");
         Ok(get_payload_response)
+    }
+
+    pub async fn submit_preconf_bundle(
+        Extension(proposer_api): Extension<Arc<ProposerApi<A, DB, M, G>>>,
+        req: Request<Body>,
+    ) -> Result<StatusCode, ProposerApiError> {
+        
+        // extract bundle of req body
+        let req_v: Vec<Bytes> = match deserialize_get_payload_vec_bytes(req).await {
+            Ok(vec_tx) => vec_tx,
+            Err(err) => {
+                warn!(
+                    event = "decoding preconf bundle",
+                    error = %err,
+                    "failed to decode preconf bundle",
+                );
+                return Err(err);
+            }
+        };
+        let transactions = req_v
+            .into_iter()
+            .map(recover_raw_transaction)
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .map(|tx| tx)
+            .collect::<Vec<_>>();
+        // Store in local memory
+        let _ = proposer_api._submit_preconf(transactions);
+
+        Ok(StatusCode::OK)
+    }
+    async fn _submit_preconf(
+        &self,
+        transactions: Vec<PooledTransactionsElement>,
+    ) -> () {
+        let (head_slot, slot_duty) = self.curr_slot_info.read().await.clone();
+        info!(
+            event = "submit_preconf_bundle",
+            head_slot = head_slot,
+        );
+        let ttxs = transactions.len().clone();
+        *self.beta_space_bundle.write().await = Some(transactions);
+        print!("written {} transactions", ttxs);
+        ()
+    }
+    pub async fn clean_beta_space (
+         &self,
+    ) -> Result<(), ProposerApiError> {
+        let mut beta_space = self.beta_space_bundle.write().await; 
+        *beta_space = None;
+        print!("Removed bundle from memory");
+        Ok(())
     }
 }
 
@@ -1290,4 +1359,23 @@ fn get_consensus_version(block: &SignedBeaconBlock) -> ethereum_consensus::Fork 
         SignedBeaconBlock::Capella(_) => ethereum_consensus::Fork::Capella,
         SignedBeaconBlock::Deneb(_) => ethereum_consensus::Fork::Deneb,
     }
+}
+// added
+pub async fn deserialize_get_payload_vec_bytes(
+    req: Request<Body>,
+) -> Result<Vec<Bytes>, ProposerApiError> {
+    let body = req.into_body();
+    let body_bytes = to_bytes(body, MAX_BLINDED_BLOCK_LENGTH).await?;
+    print!("{:?}", body_bytes);
+    Ok(serde_json::from_slice(&body_bytes)?)
+}
+pub fn recover_raw_transaction(data: Bytes) -> Result<PooledTransactionsElement, ProposerApiError> {
+    if data.is_empty() {
+        return Err(ProposerApiError::NoBids)
+    }
+    let transaction = PooledTransactionsElement::decode_enveloped(
+        data.into(), // revision based (Bytes)
+    )
+        .map_err(|_| ProposerApiError::BidValueZero)?;
+    Ok(transaction)
 }

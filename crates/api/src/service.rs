@@ -152,7 +152,7 @@ impl ApiService {
             slot_update_sender.clone(),
             builder_gossip_receiver,
         ));
-
+        
         gossiper.start_server(builder_gossip_sender, proposer_gossip_sender).await;
 
         let validator_preferences = Arc::new(config.validator_preferences.clone());
@@ -171,7 +171,15 @@ impl ApiService {
         ));
 
         let data_api = Arc::new(DataApiProd::new(validator_preferences.clone(), db.clone()));
-	let preconf_api = Arc::new(PreconfApiProd::new(auctioneer.clone(), db.clone(), chain_info.clone()));
+	let preconf_api = Arc::new(
+        PreconfApiProd::new(
+            auctioneer.clone(), 
+            //db.clone(), 
+            chain_info.clone(),
+            gossiper.clone(),
+        //    builder_gossip_receiver,
+        )
+    );
 
         let bids_cache: Arc<BidsCache> = Arc::new(
             Cache::builder()

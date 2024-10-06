@@ -11,6 +11,7 @@ use helix_database::BuilderInfoDocument;
 
 use crate::{error::AuctioneerError, types::SaveBidAndUpdateTopBidResponse};
 use tokio_stream::{Stream, StreamExt};
+use reth_primitives::PooledTransactionsElement;
 
 #[async_trait]
 #[auto_impl::auto_impl(Arc)]
@@ -176,6 +177,16 @@ pub trait Auctioneer: Send + Sync + Clone {
         timestamp_ms: u64,
     ) -> Result<(), AuctioneerError>;
 
+    async fn save_bundle_beta_space_txs(
+        &self,
+        slot: u64,
+        bundle: Vec<PooledTransactionsElement>,
+    ) -> Result<(), AuctioneerError>;
+
+    async fn get_bundle_beta_space_txs(
+        &self,
+        slot: u64,
+    ) -> Result<Option<Vec<PooledTransactionsElement>>, AuctioneerError>;
     
     /// Try to acquire or renew leadership for the housekeeper.
     /// Returns: true if the housekeeper is the leader, false if it isn't.

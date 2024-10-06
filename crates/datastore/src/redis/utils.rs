@@ -97,6 +97,17 @@ pub fn get_seen_block_hashes_key(
 ) -> String {
     format!("{SEEN_BLOCK_HASHES_KEY}:{slot}_{parent_hash:?}_{proposer_pub_key:?}")
 }
+// Added
+// TODO: 
+// refactor as others
+// is blockhash needed?
+pub fn get_beta_transactions_key(
+    slot: u64,
+//    proposer_pub_key: &BlsPublicKey,
+//    block_hash: &Hash32,
+) -> String {
+    format!("Beta_space:{slot}")
+}
 
 pub fn get_pending_block_builder_key(builder_pub_key: &BlsPublicKey) -> String {
     format!("{PENDING_BLOCK_KEY}:{builder_pub_key:?}")

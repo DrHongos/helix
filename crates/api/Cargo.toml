@@ -41,6 +41,10 @@ redis.workspace = true
 reth-primitives.workspace = true
 ethereum-consensus.workspace = true
 
+# Added
+reth-rpc.workspace = true
+alloy-primitives.workspace = true
+
 # Testing and Mocking
 serial_test.workspace = true
 mockito.workspace = true
@@ -56,3 +60,4 @@ moka = "0.9"
 
 [build-dependencies]
 tonic-build = "0.10"
+

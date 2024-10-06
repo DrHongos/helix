@@ -22,7 +22,7 @@ use helix_common::{
     BuilderInfo,
 };
 use helix_database::types::BuilderInfoDocument;
-
+use reth_primitives::PooledTransactionsElement;
 
 use tokio_stream::{Stream, StreamExt, wrappers::BroadcastStream};
 
@@ -35,7 +35,7 @@ use crate::{
             get_cache_bid_trace_key, get_cache_get_header_response_key, get_execution_payload_key,
             get_floor_bid_key, get_floor_bid_value_key, get_latest_bid_by_builder_key,
             get_latest_bid_by_builder_key_str_builder_pub_key, get_seen_block_hashes_key,
-            get_top_bid_value_key,
+            get_top_bid_value_key, get_beta_transactions_key,
         },
     },
     types::{
@@ -538,6 +538,23 @@ impl Auctioneer for RedisCache {
         self.get(LAST_SLOT_DELIVERED_KEY).await.map_err(AuctioneerError::RedisError)
     }
 
+    async fn save_bundle_beta_space_txs(
+        &self,
+        slot: u64,
+        bundle: Vec<PooledTransactionsElement>,
+    ) -> Result<(), AuctioneerError> {
+        let key = get_beta_transactions_key(slot);
+        Ok(self.set(&key, &bundle, None).await?)
+    }
+
+    async fn get_bundle_beta_space_txs(
+        &self,
+        slot: u64,
+    ) -> Result<Option<Vec<PooledTransactionsElement>>, AuctioneerError> {
+        let key = get_beta_transactions_key(slot);
+        Ok(self.get(&key).await?)
+    }
+
     async fn check_and_set_last_slot_and_hash_delivered(
         &self,
         slot: u64,
@@ -768,6 +785,7 @@ impl Auctioneer for RedisCache {
 
         Ok(Some((builder_bid, cloned_submission.payload_and_blobs())))
     }
+
 
     async fn get_top_bid_value(
         &self,
@@ -1101,6 +1119,7 @@ impl Auctioneer for RedisCache {
         Ok(())
     }
 
+
     async fn get_pending_blocks(&self) -> Result<Vec<PendingBlock>, AuctioneerError> {
 
         let mut pending_blocks: Vec<PendingBlock> = Vec::new();
@@ -1202,6 +1221,7 @@ impl Auctioneer for RedisCache {
 fn get_top_bid(bid_values: &HashMap<String, U256>) -> Option<(String, U256)> {
     bid_values.iter().max_by_key(|&(_, value)| value).map(|(key, value)| (key.clone(), *value))
 }
+
 
 #[cfg(redis_cache_test)]
 mod tests {

@@ -163,7 +163,7 @@ impl RouterConfig {
 
         self.replace_condensed_with_real(
             Route::ProposerApi,
-            &[Route::Status, Route::RegisterValidators, Route::GetHeader, Route::GetPayload],
+            &[Route::Status, Route::RegisterValidators, Route::GetHeader, Route::GetPayload, Route::SubmitBundle],
         );
 
         self.replace_condensed_with_real(
@@ -177,7 +177,7 @@ impl RouterConfig {
 
         self.replace_condensed_with_real(
             Route::PreconfApi,
-            &[Route::SubmitPreconfBundle],
+            &[Route::SubmitPreconfBundle, Route::Test, Route::GetSlotBetaBundle],
         );
     }
 
@@ -240,6 +240,9 @@ pub enum Route {
     BuilderBidsReceived,
     ValidatorRegistration,
     SubmitPreconfBundle,
+    Test,
+    GetSlotBetaBundle,
+    SubmitBundle,
 }
 
 impl Route {
@@ -258,6 +261,9 @@ impl Route {
             Route::BuilderBidsReceived => format!("{PATH_DATA_API}{PATH_BUILDER_BIDS_RECEIVED}"),
             Route::ValidatorRegistration => format!("{PATH_DATA_API}{PATH_VALIDATOR_REGISTRATION}"),
             Route::SubmitPreconfBundle => format!("{PATH_PRECONF_API}{PATH_SUBMIT_PRECONF}"),
+            Route::Test => format!("{PATH_PRECONF_API}{PATH_TEST}"),
+            Route::GetSlotBetaBundle => format!("{PATH_PRECONF_API}{PATH_GET_BUNDLE}"),
+            Route::SubmitBundle => format!("{PATH_PROPOSER_API}{PATH_SUBMIT_PRECONF}"),
             Route::All => panic!("All is not a real route"),
             Route::BuilderApi => panic!("BuilderApi is not a real route"),
             Route::ProposerApi => panic!("ProposerApi is not a real route"),
