@@ -1,52 +1,40 @@
 // Modified from builder/api.rs
 // Intended to serve preconfirmation functions required
-// TODO: prepare /beta_transactions_request endpoint
-// to store a bundle of transactions to be included in a slot block
+// TODO: 
+// - create housekeep & gossip channel for this API
+// - clean up dependencies
+// - fix error types (used placeholders)
 use std::{
-    collections::HashMap, io::Read, sync::Arc, time::{Duration, SystemTime, UNIX_EPOCH}, sync::Mutex
+    collections::HashMap, io::Read, sync::Arc
 };
 
 use axum::{
-    extract::ws::{WebSocket, WebSocketUpgrade, Message},
     body::{to_bytes, Body},
     http::{Request, StatusCode},
-    response::{IntoResponse, Response},
+    response::IntoResponse,
     Extension,
 };
 use ethereum_consensus::{
-    configs::mainnet::{CAPELLA_FORK_EPOCH, SECONDS_PER_SLOT},
-    phase0::mainnet::SLOTS_PER_EPOCH,
-    primitives::{BlsPublicKey,  Hash32},
     ssz::{self, prelude::*},
 };
 use reth_primitives::{
     Bytes,
-    transaction::{TransactionSigned, TxType},
     PooledTransactionsElement, 
-    PooledTransactionsElementEcRecovered,
 };
-use flate2::read::GzDecoder;
 use futures::StreamExt;
-use hyper::HeaderMap;
-use tokio::{
-    sync::{
-        mpsc::{self, error::SendError, Receiver, Sender},
-        RwLock,
-    },
-    time::{self, Instant},
+use tokio::sync::{
+    mpsc::{self, error::SendError, Sender},
+    RwLock,
 };
 use tracing::{debug, error, info, warn};
-use uuid::Uuid;
+//use uuid::Uuid;
 
 use helix_common::{
     api::{
-        builder_api::{BuilderGetValidatorsResponse, BuilderGetValidatorsResponseEntry},
-        proposer_api::ValidatorRegistrationInfo,
+        builder_api::BuilderGetValidatorsResponseEntry,
+        //proposer_api::ValidatorRegistrationInfo,
     },
-    bid_submission::{
-        v2::header_submission::SignedHeaderSubmission,
-        BidSubmission, BidTrace, SignedBidSubmission,
-    },
+    bid_submission::BidSubmission,
     chain_info::ChainInfo,
     signing::RelaySigningContext,
     simulator::BlockSimError,
@@ -54,13 +42,11 @@ use helix_common::{
     BuilderInfo, GossipedHeaderTrace, GossipedPayloadTrace, HeaderSubmissionTrace,
     SignedBuilderBid, SubmissionTrace,
 };
-use helix_datastore::{types::SaveBidAndUpdateTopBidResponse, Auctioneer};
+use helix_datastore::Auctioneer;
 use helix_housekeeper::{ChainUpdate, PayloadAttributesUpdate, SlotUpdate};
-use helix_utils::{get_payload_attributes_key, has_reached_fork, try_decode_into};
 
-use crate::{builder::{
-    error::BuilderApiError, traits::BlockSimulator, BlockSimRequest, DbInfo, OptimisticVersion,
-}, gossiper::{
+use crate::
+  gossiper::{
     traits::GossipClientTrait,
     types::{BroadcastHeaderParams, BroadcastPayloadParams, GossipedMessage},
 },    
@@ -79,8 +65,6 @@ where
     auctioneer: Arc<A>,
     gossiper: Arc<G>,
     chain_info: Arc<ChainInfo>,
-
-    //db_sender: Sender<DbInfo>,
 
     /// Information about the current head slot and next proposer duty
     curr_slot_info: Arc<RwLock<(u64, Option<BuilderGetValidatorsResponseEntry>)>>,
@@ -102,30 +86,20 @@ where
         //slot_update_subscription: Sender<Sender<ChainUpdate>>,
 //        gossip_receiver: Receiver<GossipedMessage>,
     ) -> Self {
-        //let (db_sender, db_receiver) = mpsc::channel::<DbInfo>(10_000);
-
-        // Spin up db processing task
-//        let db_clone = db.clone();
-//        tokio::spawn(async move {
-//            process_db_additions(db_clone, db_receiver).await;
-//        });
 
         let api = Self {
             auctioneer,
  //           db,
             chain_info,
-//            simulator,
             gossiper,
 //            signing_context,
-
- //           db_sender,
 
             curr_slot_info: Arc::new(RwLock::new((0, None))),
             proposer_duties_response: Arc::new(RwLock::new(None)),
             payload_attributes: Arc::new(RwLock::new(HashMap::new())),
 
         };
-
+// TODO need to implement both this protocols
         // Spin up gossip processing task
 //        let api_clone = api.clone();
 //        tokio::spawn(async move {
@@ -158,9 +132,7 @@ where
     ) -> Result<StatusCode, PreconfApiError> {
 
         info!(
-            //request_id = %request_id,
             event = "submit_preconf_bundle",
-            //head_slot = head_slot,
             //timestamp_request_start = trace.receive,
         );
 
@@ -177,9 +149,6 @@ where
             }
         };
         
-        // and then, copying reth/rpc/rpc/eth/bundle (remember this is not in the rev of reth used
-        // in this repository)
-        // https://reth.rs/docs/src/reth_rpc/eth/bundle.rs.html#76
         let transactions = req_v
             .into_iter()
             .map(recover_raw_transaction)
@@ -187,29 +156,24 @@ where
             .into_iter()
             .map(|tx| tx)
             .collect::<Vec<_>>();
-        // see how it manages filters and limits..
-
+        
         info!(
             event = "----------- received transactions ---------"
         );
-        print!("Received txs: {:#?} ", transactions);
 
-        // simulate tx (and validate) ..or maybe not? (will have to do it in the re-bundle process)
+        // We need to implement a gossip channel to update locally curr_slot_into (in housekeep)
         let (head_slot, next_duty) = api.curr_slot_info.read().await.clone();
         // store them in memory (some special place in auctioneer)
-        print!("Stored in slot: {}", head_slot);
         api.auctioneer.save_bundle_beta_space_txs(
-            head_slot, // FIXME : check if current or next
+            head_slot,
             transactions,
         ).await?;
-        // go to helix method get_payload where it should be used
 
         Ok(StatusCode::OK)
     }
     
     // returns the bundle stored in a slot
-    // TODO: return in response
-    // endpoint!
+    // TODO: return in response endpoint!
     pub async fn get_bundle_for_slot(
         Extension(api): Extension<Arc<PreconfApi<A, G>>>,
         req: Request<Body>,
@@ -217,15 +181,12 @@ where
         
         let body = req.into_body();
         let body_bytes = to_bytes(body, MAX_BLINDED_BLOCK_LENGTH).await?;
-        //print!("bytes rec: {:#?}", body_bytes);
-
         match std::str::from_utf8(&body_bytes) {
             Ok(body_str) => {
-                print!("str rec: {}", body_str);
                 match body_str.parse::<u64>() {
                     Ok(slot) => {
                         match api.auctioneer.get_bundle_beta_space_txs(slot).await {
-                            Ok(resp) => print!("{:#?}", resp),
+                            Ok(resp) => print!("Stored bundle: {:#?}", resp),
                             Err(err) => {
                                 error!(error = %err, "failed to get beta space bundle");
                                 return Err(PreconfApiError::PayloadAttributesNotYetKnown)
@@ -233,7 +194,7 @@ where
                         }
                     },
                     Err(err) => {
-                        error!(error = %err, "failed to get beta space string");
+                        error!(error = %err, "failed to get slot number");
                         return Err(PreconfApiError::PayloadAttributesNotYetKnown)
                     }
                 }
@@ -306,8 +267,6 @@ where
 }
 
 
-// taken from reth (not in revision used) modified result and error types
-// TODO: fix errors (here just existent (and invalid) placeholders)
 /// Recovers a [`PooledTransactionsElementEcRecovered`] from an enveloped encoded byte stream.
 ///
 /// See [`PooledTransactionsElement::decode_enveloped`]
@@ -317,25 +276,20 @@ pub fn recover_raw_transaction(data: Bytes) -> Result<PooledTransactionsElement,
     }
 
     let transaction = PooledTransactionsElement::decode_enveloped(
-        data.into(), // revision based (Bytes)
-    // original: &mut data.as_ref()
+        data.into(), 
     )
         .map_err(|_| PreconfApiError::FailedToDecodeHeaderSubmission)?;
     Ok(transaction)
-
-//    transaction.try_into_ecrecovered().or(Err(PreconfApiError::ProposerDutyNotFound))
 }
 
 // TODO: 
 // create struct for the payload deserialization
 // payloads limit
-// remove prints
 pub async fn deserialize_get_payload_vec_bytes(
     req: Request<Body>,
 ) -> Result<Vec<Bytes>, PreconfApiError> {
     let body = req.into_body();
     let body_bytes = to_bytes(body, MAX_BLINDED_BLOCK_LENGTH).await?;
-    print!("{:?}", body_bytes);
     Ok(serde_json::from_slice(&body_bytes)?)
 }
 

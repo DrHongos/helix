@@ -468,7 +468,8 @@ where
         
         let slot = signed_blinded_block.message().slot();
 
-        // Broadcast get payload request
+        // Broadcast get payload request // COMMENTED OUT TO AVOID SLASHING OF DOUBLE SIGNING (TO
+        // BE TESTED)
 //        if let Err(e) = proposer_api.gossiper.broadcast_get_payload(BroadcastGetPayloadParams {
 //            signed_blinded_beacon_block: signed_blinded_block.clone(),
 //            request_id: request_id.clone(),
@@ -478,16 +479,21 @@ where
 
         match proposer_api._get_payload(signed_blinded_block, &mut trace, &request_id).await {
             Ok(get_payload_response) => {
-                print!("-------- Returning payload ---------");
+                //print!("-------- Returning payload ---------");
                 let bb = proposer_api.beta_space_bundle.read().await.clone();
-                print!("beta_space_bundle is {:#?}", bb);
                 if let Some(beta_bundle) = bb {
-                    print!("Should add: {:#?}", beta_bundle);
-                    print!("To: {:#?}", get_payload_response);
-                    // need to create a fn that has access to self
+                    //print!("Should add: {:#?}", beta_bundle);
+                    //print!("To: {:#?}", get_payload_response);
+                    // TODO:
+                    //  - re-bundle block with beta-bundle added in len-1 of block payload
+                    //  transactions
+
+                    // Cleaning beta space after this
+                    // TODO:  add husekeep protocol
                     proposer_api.clean_beta_space();
-                    //proposer_api.beta_space_bundle = None; // clean up the memory
                 }
+                // Returns new block to proposer
+
                 Ok(axum::Json(get_payload_response))
             },
             Err(err) => {
@@ -825,7 +831,7 @@ where
             .map(|tx| tx)
             .collect::<Vec<_>>();
         // Store in local memory
-        let _ = proposer_api._submit_preconf(transactions);
+        let _ = proposer_api._submit_preconf(transactions).await;
 
         Ok(StatusCode::OK)
     }
@@ -840,7 +846,7 @@ where
         );
         let ttxs = transactions.len().clone();
         *self.beta_space_bundle.write().await = Some(transactions);
-        print!("written {} transactions", ttxs);
+        print!("--------written {} transactions-----", ttxs);
         ()
     }
     pub async fn clean_beta_space (
@@ -848,7 +854,7 @@ where
     ) -> Result<(), ProposerApiError> {
         let mut beta_space = self.beta_space_bundle.write().await; 
         *beta_space = None;
-        print!("Removed bundle from memory");
+        print!("------- Removed bundle from memory --------");
         Ok(())
     }
 }
@@ -1366,7 +1372,7 @@ pub async fn deserialize_get_payload_vec_bytes(
 ) -> Result<Vec<Bytes>, ProposerApiError> {
     let body = req.into_body();
     let body_bytes = to_bytes(body, MAX_BLINDED_BLOCK_LENGTH).await?;
-    print!("{:?}", body_bytes);
+    print!("decoding {:?}", body_bytes);
     Ok(serde_json::from_slice(&body_bytes)?)
 }
 pub fn recover_raw_transaction(data: Bytes) -> Result<PooledTransactionsElement, ProposerApiError> {
